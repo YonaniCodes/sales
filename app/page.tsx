@@ -148,7 +148,7 @@ export default function Home() {
             </CardContent>
           </Card>
         </div>
-      </div>
-    </main>
+        </div>
+      </main>
   );
 }
