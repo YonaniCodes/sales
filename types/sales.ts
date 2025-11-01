@@ -1,12 +1,13 @@
 export interface SalesData {
-  id: string;
-  date: string;
-  product: string;
-  category: string;
-  quantity: number;
-  revenue: number;
-  region: string;
-  customer: string;
+  id?: string;
+  date?: string;
+  product?: string;
+  category?: string;
+  quantity?: number;
+  revenue?: number;
+  region?: string;
+  customer?: string;
+  [key: string]: string | number | undefined; // Allow any additional columns
 }
 
 export interface ChartData {

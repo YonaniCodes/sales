@@ -5,18 +5,39 @@ import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Cart
 import { TrendingUp, BarChart3, PieChart as PieChartIcon } from "lucide-react";
 import { ChartData } from "@/types/sales";
 import { ChartsEmptyState } from "./ChartsEmptyState";
+import { UploadingState } from "./UploadingState";
 
 interface ChartsSectionProps {
   lineData: ChartData[];
   barData: ChartData[];
   pieData: ChartData[];
   onFileUpload?: (file: File) => void;
+  uploadingFile?: string | null;
+  uploadProgress?: number;
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82ca9d'];
 
-export function ChartsSection({ lineData, barData, pieData, onFileUpload }: ChartsSectionProps) {
+export function ChartsSection({ 
+  lineData, 
+  barData, 
+  pieData, 
+  onFileUpload, 
+  uploadingFile, 
+  uploadProgress = 0 
+}: ChartsSectionProps) {
   const hasData = lineData.length > 0 || barData.length > 0 || pieData.length > 0;
+
+  // Show uploading state
+  if (uploadingFile) {
+    return (
+      <UploadingState
+        fileName={uploadingFile}
+        progress={uploadProgress}
+        isComplete={uploadProgress === 100}
+      />
+    );
+  }
 
   if (!hasData) {
     return <ChartsEmptyState onFileUpload={onFileUpload} />;

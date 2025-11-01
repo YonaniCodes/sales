@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { ChatSection } from "@/components/dashboard/ChatSection";
 import { ChartsSection } from "@/components/dashboard/ChartsSection";
+import { AIGeneratedCharts } from "@/components/dashboard/AIGeneratedCharts";
+import { RawCSVInspector } from "@/components/dashboard/RawCSVInspector";
 import { SalesData } from "@/types/sales";
 import { generateChartData } from "@/lib/salesAnalysis";
 import { Menu, X } from "lucide-react";
@@ -14,6 +16,9 @@ export default function DashboardPage() {
   const [activeSection, setActiveSection] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [chatUploadTrigger, setChatUploadTrigger] = useState<File | null>(null);
 
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -34,12 +39,23 @@ export default function DashboardPage() {
   };
 
   const handleFileUpload = (file: File) => {
+    setUploadingFile(file.name);
+    setUploadProgress(0);
+
+    // Also trigger chat upload
+    setChatUploadTrigger(file);
+
     processFile(file);
   };
 
   const processFile = async (file: File) => {
+    // Simulate progress
+    setUploadProgress(20);
     const Papa = (await import("papaparse")).default;
     const XLSX = await import("xlsx");
+    const { parseSalesData, debugCSVStructure } = await import(
+      "@/lib/dataParser"
+    );
 
     const isCSV = file.name.endsWith(".csv");
     const isExcel = file.name.endsWith(".xlsx") || file.name.endsWith(".xls");
@@ -50,64 +66,97 @@ export default function DashboardPage() {
       let parsedData: SalesData[] = [];
 
       if (isCSV) {
+        setUploadProgress(40);
         Papa.parse(file, {
           header: true,
+          skipEmptyLines: true,
           complete: (results) => {
-            parsedData = (results.data as Record<string, string>[]).map(
-              (row, index: number) => ({
-                id: row.id || index.toString(),
-                date: row.date || row.Date || new Date().toISOString(),
-                product: row.product || row.Product || "Unknown",
-                category: row.category || row.Category || "General",
-                quantity: parseFloat(row.quantity || row.Quantity || "0"),
-                revenue: parseFloat(
-                  row.revenue || row.Revenue || row.amount || row.Amount || "0"
-                ),
-                region: row.region || row.Region || "Unknown",
-                customer: row.customer || row.Customer || "Unknown",
-              })
+            setUploadProgress(70);
+
+            // Debug: Check CSV structure
+            const csvData = results.data as Array<Record<string, string>>;
+            debugCSVStructure(csvData);
+
+            // Use smart parser
+            parsedData = parseSalesData(csvData);
+
+            console.log(
+              `Successfully parsed ${parsedData.length} valid records`
             );
 
+            setUploadProgress(90);
             setSalesData(parsedData);
+
+            // Complete the upload
+            setTimeout(() => {
+              setUploadProgress(100);
+              setTimeout(() => {
+                setUploadingFile(null);
+              }, 1000);
+            }, 300);
           },
           error: (error) => {
             console.error("CSV parsing error:", error);
+            setUploadingFile(null);
             alert("Error parsing CSV file. Please check the format.");
           },
         });
       } else {
+        setUploadProgress(40);
+        const { parseDataDynamically } = await import("@/lib/smartDataParser");
         const reader = new FileReader();
         reader.onload = (e) => {
-          const data = e.target?.result;
-          const workbook = XLSX.read(data, { type: "binary" });
+          setUploadProgress(60);
+          const fileData = e.target?.result;
+          const workbook = XLSX.read(fileData, { type: "binary" });
           const sheetName = workbook.SheetNames[0];
           const sheet = workbook.Sheets[sheetName];
           const jsonData = XLSX.utils.sheet_to_json(sheet);
 
-          parsedData = (jsonData as Record<string, string>[]).map(
-            (row, index: number) => ({
-              id: row.id || index.toString(),
-              date: row.date || row.Date || new Date().toISOString(),
-              product: row.product || row.Product || "Unknown",
-              category: row.category || row.Category || "General",
-              quantity: parseFloat(row.quantity || row.Quantity || "0"),
-              revenue: parseFloat(
-                row.revenue || row.Revenue || row.amount || row.Amount || "0"
-              ),
-              region: row.region || row.Region || "Unknown",
-              customer: row.customer || row.Customer || "Unknown",
-            })
+          setUploadProgress(80);
+
+          // Use dynamic smart parser
+          const parsedResult = parseDataDynamically(
+            jsonData as Array<Record<string, string | number>>
           );
 
+          console.log(
+            `✅ Parsed ${parsedResult.summary.validRows} records from ${parsedResult.summary.totalRows} rows`
+          );
+          console.log(`📊 Columns detected:`, parsedResult.summary.columns);
+
+          // Store the raw data
+          parsedData = parsedResult.data as unknown as SalesData[];
+
+          setUploadProgress(95);
           setSalesData(parsedData);
+
+          // Complete the upload
+          setTimeout(() => {
+            setUploadProgress(100);
+            setTimeout(() => {
+              setUploadingFile(null);
+            }, 1000);
+          }, 300);
         };
         reader.readAsBinaryString(file);
       }
     } catch (error) {
       console.error("File processing error:", error);
+      setUploadingFile(null);
       alert("Error processing file.");
     }
   };
+
+  // Reset trigger after it's been used
+  useEffect(() => {
+    if (chatUploadTrigger) {
+      const timer = setTimeout(() => {
+        setChatUploadTrigger(null);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [chatUploadTrigger]);
 
   const handleLogout = () => {
     // Mock logout - integrate with better-auth later
@@ -196,17 +245,40 @@ export default function DashboardPage() {
             <ChatSection
               salesData={salesData}
               onDataUpload={handleDataUpload}
+              externalFileUpload={chatUploadTrigger}
             />
           </div>
 
           {/* Right - Charts Section */}
-          <div className="w-full lg:w-3/5 xl:w-2/3 h-1/2 lg:h-full bg-muted/30">
-            <ChartsSection
-              lineData={lineData}
-              barData={barData}
-              pieData={pieData}
-              onFileUpload={handleFileUpload}
-            />
+          <div className="w-full lg:w-3/5 xl:w-2/3 h-1/2 lg:h-full bg-muted/30 overflow-y-auto">
+            {uploadingFile ? (
+              <div className="flex items-center justify-center h-full">
+                <ChartsSection
+                  lineData={lineData}
+                  barData={barData}
+                  pieData={pieData}
+                  onFileUpload={handleFileUpload}
+                  uploadingFile={uploadingFile}
+                  uploadProgress={uploadProgress}
+                />
+              </div>
+            ) : salesData.length > 0 ? (
+              <div className="p-6">
+                <RawCSVInspector />
+                <div className="mt-6">
+                  <AIGeneratedCharts salesData={salesData} />
+                </div>
+              </div>
+            ) : (
+              <ChartsSection
+                lineData={lineData}
+                barData={barData}
+                pieData={pieData}
+                onFileUpload={handleFileUpload}
+                uploadingFile={uploadingFile}
+                uploadProgress={uploadProgress}
+              />
+            )}
           </div>
         </div>
       </div>

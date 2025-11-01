@@ -4,16 +4,17 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Upload, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Message, SalesData } from "@/types/sales";
-import { analyzeSalesData } from "@/lib/salesAnalysis";
+import { chatWithGemini } from "@/lib/gemini";
+import { parseDataDynamically } from "@/lib/smartDataParser";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 
 interface ChatSectionProps {
   salesData: SalesData[];
   onDataUpload: (data: SalesData[]) => void;
+  externalFileUpload?: File | null;
 }
 
 const preloadedPrompts = [
@@ -24,7 +25,11 @@ const preloadedPrompts = [
   "Break down revenue by category",
 ];
 
-export function ChatSection({ salesData, onDataUpload }: ChatSectionProps) {
+export function ChatSection({
+  salesData,
+  onDataUpload,
+  externalFileUpload,
+}: ChatSectionProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -44,6 +49,19 @@ export function ChatSection({ salesData, onDataUpload }: ChatSectionProps) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Handle external file upload from drag & drop
+  useEffect(() => {
+    if (externalFileUpload) {
+      const syntheticEvent = {
+        target: {
+          files: [externalFileUpload],
+        },
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+      handleFileUpload(syntheticEvent);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalFileUpload]);
 
   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -76,19 +94,16 @@ export function ChatSection({ salesData, onDataUpload }: ChatSectionProps) {
         // Parse CSV
         Papa.parse(file, {
           header: true,
+          skipEmptyLines: true,
+          dynamicTyping: true,
           complete: (results) => {
-            parsedData = results.data.map((row: any, index: number) => ({
-              id: row.id || index.toString(),
-              date: row.date || row.Date || new Date().toISOString(),
-              product: row.product || row.Product || "Unknown",
-              category: row.category || row.Category || "General",
-              quantity: parseFloat(row.quantity || row.Quantity || "0"),
-              revenue: parseFloat(
-                row.revenue || row.Revenue || row.amount || row.Amount || "0"
-              ),
-              region: row.region || row.Region || "Unknown",
-              customer: row.customer || row.Customer || "Unknown",
-            }));
+            // Use smart dynamic parser
+            const parsedResult = parseDataDynamically(
+              results.data as Array<Record<string, string | number>>
+            );
+            parsedData = parsedResult.data as unknown as SalesData[];
+
+            console.log("CSV parsing complete:", parsedResult.summary);
 
             onDataUpload(parsedData);
 
@@ -124,24 +139,19 @@ export function ChatSection({ salesData, onDataUpload }: ChatSectionProps) {
         // Parse Excel
         const reader = new FileReader();
         reader.onload = (e) => {
-          const data = e.target?.result;
-          const workbook = XLSX.read(data, { type: "binary" });
+          const fileData = e.target?.result;
+          const workbook = XLSX.read(fileData, { type: "binary" });
           const sheetName = workbook.SheetNames[0];
           const sheet = workbook.Sheets[sheetName];
           const jsonData = XLSX.utils.sheet_to_json(sheet);
 
-          parsedData = jsonData.map((row: any, index: number) => ({
-            id: row.id || index.toString(),
-            date: row.date || row.Date || new Date().toISOString(),
-            product: row.product || row.Product || "Unknown",
-            category: row.category || row.Category || "General",
-            quantity: parseFloat(row.quantity || row.Quantity || "0"),
-            revenue: parseFloat(
-              row.revenue || row.Revenue || row.amount || row.Amount || "0"
-            ),
-            region: row.region || row.Region || "Unknown",
-            customer: row.customer || row.Customer || "Unknown",
-          }));
+          // Use smart dynamic parser
+          const parsedResult = parseDataDynamically(
+            jsonData as Array<Record<string, string | number>>
+          );
+          parsedData = parsedResult.data as unknown as SalesData[];
+
+          console.log("Excel parsing complete:", parsedResult.summary);
 
           onDataUpload(parsedData);
 
@@ -180,7 +190,7 @@ export function ChatSection({ salesData, onDataUpload }: ChatSectionProps) {
     }
   };
 
-  const handleSendMessage = (messageText?: string) => {
+  const handleSendMessage = async (messageText?: string) => {
     const text = messageText || input.trim();
     if (!text) return;
 
@@ -195,9 +205,10 @@ export function ChatSection({ salesData, onDataUpload }: ChatSectionProps) {
     setInput("");
     setIsTyping(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const response = analyzeSalesData(salesData, text);
+    try {
+      // Get AI response from Gemini
+      const response = await chatWithGemini(text, salesData);
+
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
@@ -205,8 +216,25 @@ export function ChatSection({ salesData, onDataUpload }: ChatSectionProps) {
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, aiMessage]);
+    } catch (error) {
+      console.error("Chat error:", error);
+      const err = error as Error;
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: `❌ Sorry, I encountered an error: ${
+          err.message || "Unknown error"
+        }. ${
+          err.message?.includes("API key")
+            ? "\n\nPlease make sure you've added your Gemini API key to the .env.local file."
+            : ""
+        }`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsTyping(false);
-    }, 1000);
+    }
   };
 
   const handlePromptClick = (prompt: string) => {
@@ -214,9 +242,9 @@ export function ChatSection({ salesData, onDataUpload }: ChatSectionProps) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-background max-h-screen">
+    <div className="flex flex-col h-full bg-background overflow-hidden">
       {/* Chat Header */}
-      <div className="p-4 border-b flex-shrink-0">
+      <div className="p-4 border-b shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
             <Sparkles className="w-4 h-4 text-primary" />
@@ -233,7 +261,7 @@ export function ChatSection({ salesData, onDataUpload }: ChatSectionProps) {
       </div>
 
       {/* Messages Area */}
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+      <div className="flex-1 overflow-y-auto p-4 min-h-0" ref={scrollRef}>
         <div className="space-y-4">
           {messages.map((message) => (
             <div
@@ -281,11 +309,11 @@ export function ChatSection({ salesData, onDataUpload }: ChatSectionProps) {
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Preloaded Prompts */}
       {messages.length <= 2 && (
-        <div className="p-4 border-t bg-muted/50">
+        <div className="p-4 border-t bg-muted/50 shrink-0">
           <p className="text-xs font-medium mb-2 text-muted-foreground">
             Suggested prompts:
           </p>
@@ -305,7 +333,7 @@ export function ChatSection({ salesData, onDataUpload }: ChatSectionProps) {
       )}
 
       {/* Input Area */}
-      <div className="p-4 border-t">
+      <div className="p-4 border-t shrink-0">
         <div className="flex gap-2">
           <input
             ref={fileInputRef}
