@@ -7,7 +7,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { TrendingUp, AlertCircle, Lightbulb, BarChart3 } from "lucide-react";
 import { SalesData } from "@/types/sales";
-import { DataDebugger } from "./DataDebugger";
 import { useEffect, useState } from "react";
 
 interface AIAnalysis {
@@ -216,9 +215,6 @@ export function AIGeneratedCharts({ salesData }: AIGeneratedChartsProps) {
 
   return (
     <div className="space-y-6">
-      {/* Debug Info - Shows actual column structure */}
-      <DataDebugger salesData={salesData} />
-
       {/* AI Insights Summary */}
       <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
         <CardHeader>

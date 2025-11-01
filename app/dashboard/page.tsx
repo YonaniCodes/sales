@@ -5,7 +5,7 @@ import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { ChatSection } from "@/components/dashboard/ChatSection";
 import { ChartsSection } from "@/components/dashboard/ChartsSection";
 import { AIGeneratedCharts } from "@/components/dashboard/AIGeneratedCharts";
-import { RawCSVInspector } from "@/components/dashboard/RawCSVInspector";
+import { GoogleSheetsDialog } from "@/components/dashboard/GoogleSheetsDialog";
 import { SalesData } from "@/types/sales";
 import { generateChartData } from "@/lib/salesAnalysis";
 import { Menu, X, PanelLeftClose, PanelLeftOpen } from "lucide-react";
@@ -21,6 +21,7 @@ export default function DashboardPage() {
   const [uploadingFile, setUploadingFile] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [chatUploadTrigger, setChatUploadTrigger] = useState<File | null>(null);
+  const [showSheetsDialog, setShowSheetsDialog] = useState(false);
 
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -166,10 +167,39 @@ export default function DashboardPage() {
     // window.location.href = "/login";
   };
 
+  const handleGoogleSheetsData = async (data: Array<Record<string, string | number>>) => {
+    setUploadingFile("Google Sheets");
+    setUploadProgress(50);
+    
+    const { parseDataDynamically } = await import("@/lib/smartDataParser");
+    const parsedResult = parseDataDynamically(data);
+    const sheetsData = parsedResult.data as unknown as SalesData[];
+    
+    setUploadProgress(90);
+    setSalesData(sheetsData);
+    
+    setTimeout(() => {
+      setUploadProgress(100);
+      setTimeout(() => {
+        setUploadingFile(null);
+      }, 1000);
+    }, 300);
+  };
+
   const { lineData, barData, pieData } = generateChartData(salesData);
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-background">
+    <>
+      <GoogleSheetsDialog 
+        open={showSheetsDialog}
+        onOpenChange={(open) => {
+          console.log("Dialog state changing to:", open);
+          setShowSheetsDialog(open);
+        }}
+        onDataFetched={handleGoogleSheetsData}
+      />
+      
+      <div className="h-screen w-screen overflow-hidden bg-background">
       {/* Mobile Header */}
       {isMobile && (
         <div className="flex items-center justify-between p-4 border-b bg-background lg:hidden">
@@ -297,10 +327,7 @@ export default function DashboardPage() {
                   </div>
                 ) : salesData.length > 0 ? (
                   <div className="p-6">
-                    <RawCSVInspector />
-                    <div className="mt-6">
-                      <AIGeneratedCharts salesData={salesData} />
-                    </div>
+                    <AIGeneratedCharts salesData={salesData} />
                   </div>
                 ) : (
                   <ChartsSection
@@ -308,6 +335,7 @@ export default function DashboardPage() {
                     barData={barData}
                     pieData={pieData}
                     onFileUpload={handleFileUpload}
+                    onGoogleSheetsClick={() => setShowSheetsDialog(true)}
                     uploadingFile={uploadingFile}
                     uploadProgress={uploadProgress}
                   />
@@ -345,10 +373,7 @@ export default function DashboardPage() {
                     </div>
                   ) : salesData.length > 0 ? (
                     <div className="p-6">
-                      <RawCSVInspector />
-                      <div className="mt-6">
-                        <AIGeneratedCharts salesData={salesData} />
-                      </div>
+                      <AIGeneratedCharts salesData={salesData} />
                     </div>
                   ) : (
                     <ChartsSection
@@ -356,6 +381,7 @@ export default function DashboardPage() {
                       barData={barData}
                       pieData={pieData}
                       onFileUpload={handleFileUpload}
+                      onGoogleSheetsClick={() => setShowSheetsDialog(true)}
                       uploadingFile={uploadingFile}
                       uploadProgress={uploadProgress}
                     />
@@ -367,5 +393,6 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

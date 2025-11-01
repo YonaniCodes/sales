@@ -12,6 +12,7 @@ interface ChartsSectionProps {
   barData: ChartData[];
   pieData: ChartData[];
   onFileUpload?: (file: File) => void;
+  onGoogleSheetsClick?: () => void;
   uploadingFile?: string | null;
   uploadProgress?: number;
 }
@@ -22,7 +23,8 @@ export function ChartsSection({
   lineData, 
   barData, 
   pieData, 
-  onFileUpload, 
+  onFileUpload,
+  onGoogleSheetsClick, 
   uploadingFile, 
   uploadProgress = 0 
 }: ChartsSectionProps) {
@@ -40,7 +42,7 @@ export function ChartsSection({
   }
 
   if (!hasData) {
-    return <ChartsEmptyState onFileUpload={onFileUpload} />;
+    return <ChartsEmptyState onFileUpload={onFileUpload} onGoogleSheetsClick={onGoogleSheetsClick} />;
   }
 
   return (

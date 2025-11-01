@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 
 interface ChartsEmptyStateProps {
   onFileUpload?: (file: File) => void;
+  onGoogleSheetsClick?: () => void;
 }
 
-export function ChartsEmptyState({ onFileUpload }: ChartsEmptyStateProps) {
+export function ChartsEmptyState({ onFileUpload, onGoogleSheetsClick }: ChartsEmptyStateProps) {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -65,7 +66,13 @@ export function ChartsEmptyState({ onFileUpload }: ChartsEmptyStateProps) {
   };
 
   const handleGoogleSheetsConnect = () => {
-    alert("Google Sheets Integration Coming Soon!\n\n📋 Next Steps:\n1. Set up Google OAuth\n2. Connect to Sheets API\n3. Select your spreadsheet\n4. Import data automatically\n\nFor now, please export your sheet as CSV and upload it.");
+    console.log("Google Sheets button clicked!");
+    console.log("onGoogleSheetsClick callback:", onGoogleSheetsClick);
+    if (onGoogleSheetsClick) {
+      onGoogleSheetsClick();
+    } else {
+      console.warn("onGoogleSheetsClick is not defined!");
+    }
   };
 
   return (
@@ -138,8 +145,8 @@ export function ChartsEmptyState({ onFileUpload }: ChartsEmptyStateProps) {
         </Card>
 
         {/* Google Sheets Connection */}
-        <Card className="border-2 hover:border-primary/50 transition-all cursor-pointer hover:shadow-md">
-          <CardContent className="flex items-center justify-between p-5" onClick={handleGoogleSheetsConnect}>
+        <Card className="border-2 hover:border-primary/50 transition-all hover:shadow-md">
+          <CardContent className="flex items-center justify-between p-5">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center flex-shrink-0">
                 <svg
@@ -164,10 +171,7 @@ export function ChartsEmptyState({ onFileUpload }: ChartsEmptyStateProps) {
             <Button 
               variant="default" 
               size="default"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleGoogleSheetsConnect();
-              }}
+              onClick={handleGoogleSheetsConnect}
             >
               <Link2 className="w-4 h-4 mr-2" />
               Connect

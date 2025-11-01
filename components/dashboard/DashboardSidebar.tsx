@@ -1,9 +1,10 @@
 "use client";
 
-import { LayoutDashboard, BarChart3, FileText, Settings, LogOut, User } from "lucide-react";
+import { LayoutDashboard, BarChart3, FileText, Settings, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
 interface DashboardSidebarProps {
@@ -66,6 +67,14 @@ export function DashboardSidebar({
 
       {/* User Profile */}
       <div className="p-4 space-y-4">
+        {/* Theme Toggle */}
+        <div className="flex items-center justify-between px-1">
+          <span className="text-xs font-medium text-muted-foreground">Theme</span>
+          <ThemeToggle />
+        </div>
+
+        <Separator />
+
         <div className="flex items-center gap-3">
           <Avatar>
             <AvatarImage src="https://github.com/shadcn.png" alt="User" />
