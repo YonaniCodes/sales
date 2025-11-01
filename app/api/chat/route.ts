@@ -15,15 +15,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Initialize all variables at function scope
+    let currency = "ETB";
+    let currencySymbol = "ETB";
+    let totalRevenue = 0;
+    let totalQuantity = 0;
+    
     // Analyze data to provide better context
     let dataContext = "";
     
     if (salesData && salesData.length > 0) {
+      // Detect currency from data
+      const currencyValues = [...new Set(salesData.map((item: any) => item.currency))].filter(Boolean);
+      currency = currencyValues[0] || "ETB";
+      currencySymbol = currency === "ETB" ? "ETB" : currency === "USD" ? "$" : currency;
+      
       // Try multiple column names for revenue
-      const totalRevenue = salesData.reduce((sum: number, item: any) => {
+      totalRevenue = salesData.reduce((sum: number, item: any) => {
         return sum + (parseFloat(item.total_sales) || parseFloat(item.revenue) || 0);
       }, 0);
-      const totalQuantity = salesData.reduce((sum: number, item: any) => sum + (parseFloat(item.quantity) || 0), 0);
+      totalQuantity = salesData.reduce((sum: number, item: any) => sum + (parseFloat(item.quantity) || 0), 0);
       const regions = [...new Set(salesData.map((item: any) => item.region))].filter(r => r && r !== "Unknown" && r !== "Unspecified");
       const products = [...new Set(salesData.map((item: any) => item.product || item.product_category))].filter(p => p && p !== "Unknown" && p !== "Uncategorized" && p !== "General");
       const categories = [...new Set(salesData.map((item: any) => item.category || item.product_category))].filter(c => c && c !== "General" && c !== "Uncategorized");
@@ -93,9 +104,9 @@ export async function POST(req: NextRequest) {
       dataContext = `
 Sales Data Summary:
 - Total Records: ${salesData.length}
+- Currency: ${currency} (Ethiopian Birr)
 - ${regionFilter ? `Filtering by Region: ${regionFilter} (${relevantData.length} records)` : "All Regions"}
-- Total ${metricName}: ${useQuantity ? `${metricValue.toLocaleString()} units` : `$${metricValue.toLocaleString()}`}
-- Total Revenue (total_sales column): $${totalRevenue.toLocaleString()}
+- Total Revenue (total_sales column): ${currencySymbol} ${totalRevenue.toLocaleString()}
 - Total Quantity: ${totalQuantity.toLocaleString()} units
 - Available Regions (${regions.length}): ${regions.join(", ")}
 - Product Categories (${categories.length}): ${categories.slice(0, 10).join(", ")}${categories.length > 10 ? "..." : ""}
@@ -104,17 +115,17 @@ Sales Data Summary:
 
 TOP PRODUCT CATEGORIES ${regionFilter ? `in ${regionFilter}` : "(All Regions)"}:
 ${topProducts.map((p, i) => 
-  `${i + 1}. ${p.name} - Revenue: $${p.revenue.toLocaleString()}, Quantity: ${p.quantity.toLocaleString()} units (${p.count} transactions)`
+  `${i + 1}. ${p.name} - Revenue: ${currencySymbol} ${p.revenue.toLocaleString()}, Quantity: ${p.quantity.toLocaleString()} units (${p.count} transactions)`
 ).join("\n")}
 
 ALL REGIONS Performance:
 ${topRegions.map((r, i) => 
-  `${i + 1}. ${r.name} - Revenue: $${r.revenue.toLocaleString()}, Quantity: ${r.quantity.toLocaleString()} units (${r.count} transactions)`
+  `${i + 1}. ${r.name} - Revenue: ${currencySymbol} ${r.revenue.toLocaleString()}, Quantity: ${r.quantity.toLocaleString()} units (${r.count} transactions)`
 ).join("\n")}
 
 DATA SAMPLE (first 5 ${regionFilter ? `from ${regionFilter}` : "records"}):
 ${relevantData.slice(0, 5).map((item: any, i: number) => 
-  `${i + 1}. Region: ${item.region}, Category: ${item.product_category || item.category}, Quantity: ${item.quantity}, Revenue: $${item.total_sales || item.revenue || 0}, Customer: ${item.customer_segment || item.customer}, Date: ${item.date}`
+  `${i + 1}. Region: ${item.region}, Category: ${item.product_category || item.category}, Quantity: ${item.quantity}, Revenue: ${currencySymbol} ${item.total_sales || item.revenue || 0}, Customer: ${item.customer_segment || item.customer}, Date: ${item.date}`
 ).join("\n")}
 `;
     } else {
@@ -127,22 +138,23 @@ ${relevantData.slice(0, 5).map((item: any, i: number) =>
 ${dataContext}
 
 IMPORTANT CONTEXT:
-- The data has REAL revenue in the 'total_sales' column ($267M total!)
+- Currency: ${currency} (Ethiopian Birr) - Use "${currencySymbol}" symbol in all responses
+- Revenue is in 'total_sales' column (${currencySymbol} ${totalRevenue.toLocaleString()} total!)
 - Product names are in 'product_category' column (Spices, Electronics, Cereals, etc.)
 - Customer types are in 'customer_segment' (Wholesale, Retail, B2B)
 - When user asks about "top products" or "top categories", use the TOP PRODUCT CATEGORIES list above
 - When user asks about a specific region (e.g., Amhara, Afar, Addis Ababa), the data is already filtered for that region
 - Answer based on the ACTUAL numbers in the lists above
-- Be specific with dollar amounts and quantities
+- Use ${currencySymbol} (not $) for all currency amounts
 
 Guidelines:
 - Answer directly with the data shown above
 - Use bullet points for clarity
-- Cite specific numbers from the TOP PRODUCTS and REGIONS lists
-- If revenue is $0, explain you're using quantity/units as the metric
-- Use emojis for visual appeal (📊 📈 🔢)
+- Cite specific numbers from the TOP PRODUCT CATEGORIES and REGIONS lists
+- Always use ${currencySymbol} for currency (Ethiopian Birr)
+- Use emojis for visual appeal (📊 📈 💰)
 - Format numbers with commas
-- Be specific and concrete
+- Be specific and concrete with actual numbers
 
 User Question: ${message}`;
 
