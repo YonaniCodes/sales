@@ -27,7 +27,8 @@ export async function POST(req: NextRequest) {
 
     // Analyze column patterns
     const columnAnalysis = dataColumns.map((col) => {
-      const sampleValues = salesData.slice(0, 10).map((row) => row[col]);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sampleValues = salesData.slice(0, 10).map((row: any) => row[col]);
       const hasNumbers = sampleValues.some(
         (v) => !isNaN(parseFloat(String(v)))
       );
