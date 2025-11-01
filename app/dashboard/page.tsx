@@ -167,17 +167,19 @@ export default function DashboardPage() {
     // window.location.href = "/login";
   };
 
-  const handleGoogleSheetsData = async (data: Array<Record<string, string | number>>) => {
+  const handleGoogleSheetsData = async (
+    data: Array<Record<string, string | number>>
+  ) => {
     setUploadingFile("Google Sheets");
     setUploadProgress(50);
-    
+
     const { parseDataDynamically } = await import("@/lib/smartDataParser");
     const parsedResult = parseDataDynamically(data);
     const sheetsData = parsedResult.data as unknown as SalesData[];
-    
+
     setUploadProgress(90);
     setSalesData(sheetsData);
-    
+
     setTimeout(() => {
       setUploadProgress(100);
       setTimeout(() => {
@@ -190,7 +192,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <GoogleSheetsDialog 
+      <GoogleSheetsDialog
         open={showSheetsDialog}
         onOpenChange={(open) => {
           console.log("Dialog state changing to:", open);
@@ -198,168 +200,122 @@ export default function DashboardPage() {
         }}
         onDataFetched={handleGoogleSheetsData}
       />
-      
+
       <div className="h-screen w-screen overflow-hidden bg-background">
-      {/* Mobile Header */}
-      {isMobile && (
-        <div className="flex items-center justify-between p-4 border-b bg-background lg:hidden">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="w-5 h-5 text-primary-foreground"
-              >
-                <path d="M3 3v18h18" />
-                <path d="m19 9-5 5-4-4-3 3" />
-              </svg>
-            </div>
-            <span className="font-bold text-lg">SalesAI</span>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          >
-            {isSidebarOpen ? (
-              <X className="w-5 h-5" />
-            ) : (
-              <Menu className="w-5 h-5" />
-            )}
-          </Button>
-        </div>
-      )}
-
-      <div className="flex h-full lg:h-screen">
-        {/* Left Sidebar */}
-        {!isSidebarCollapsed && !isMobile && (
-          <aside className="w-64 border-r relative">
-            <DashboardSidebar
-              activeSection={activeSection}
-              onSectionChange={setActiveSection}
-              onLogout={handleLogout}
-            />
-            {/* Collapse Button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute -right-3 top-4 z-10 h-6 w-6 rounded-full border bg-background shadow-md"
-              onClick={() => setIsSidebarCollapsed(true)}
-            >
-              <PanelLeftClose className="h-4 w-4" />
-            </Button>
-          </aside>
-        )}
-
-        {/* Sidebar Collapsed - Show Trigger */}
-        {isSidebarCollapsed && !isMobile && (
-          <div className="w-12 border-r flex items-start justify-center pt-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsSidebarCollapsed(false)}
-              className="h-10 w-10"
-            >
-              <PanelLeftOpen className="h-5 w-5" />
-            </Button>
-          </div>
-        )}
-
-        {/* Mobile Sidebar */}
+        {/* Mobile Header */}
         {isMobile && (
-          <>
-            <aside
-              className={`
+          <div className="flex items-center justify-between p-4 border-b bg-background lg:hidden">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-5 h-5 text-primary-foreground"
+                >
+                  <path d="M3 3v18h18" />
+                  <path d="m19 9-5 5-4-4-3 3" />
+                </svg>
+              </div>
+              <span className="font-bold text-lg">SalesAI</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            >
+              {isSidebarOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
+            </Button>
+          </div>
+        )}
+
+        <div className="flex h-full lg:h-screen">
+          {/* Left Sidebar */}
+          {!isSidebarCollapsed && !isMobile && (
+            <aside className="w-64 border-r relative">
+              <DashboardSidebar
+                activeSection={activeSection}
+                onSectionChange={setActiveSection}
+                onLogout={handleLogout}
+              />
+              {/* Collapse Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute -right-3 top-4 z-10 h-6 w-6 rounded-full border bg-background shadow-md"
+                onClick={() => setIsSidebarCollapsed(true)}
+              >
+                <PanelLeftClose className="h-4 w-4" />
+              </Button>
+            </aside>
+          )}
+
+          {/* Sidebar Collapsed - Show Trigger */}
+          {isSidebarCollapsed && !isMobile && (
+            <div className="w-12 border-r flex items-start justify-center pt-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsSidebarCollapsed(false)}
+                className="h-10 w-10"
+              >
+                <PanelLeftOpen className="h-5 w-5" />
+              </Button>
+            </div>
+          )}
+
+          {/* Mobile Sidebar */}
+          {isMobile && (
+            <>
+              <aside
+                className={`
                 fixed inset-y-0 left-0 z-50 w-64 
                 transform transition-transform duration-300 ease-in-out
                 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
                 mt-[57px]
               `}
-            >
-              <DashboardSidebar
-                activeSection={activeSection}
-                onSectionChange={(section) => {
-                  setActiveSection(section);
-                  setIsSidebarOpen(false);
-                }}
-                onLogout={handleLogout}
-              />
-            </aside>
-
-            {/* Overlay for mobile */}
-            {isSidebarOpen && (
-              <div
-                className="fixed inset-0 bg-black/50 z-40 mt-[57px]"
-                onClick={() => setIsSidebarOpen(false)}
-              />
-            )}
-          </>
-        )}
-
-        {/* Main Content Area with Resizable Panels */}
-        <div className="flex-1 overflow-hidden">
-          {isMobile ? (
-            // Mobile: Stacked layout
-            <div className="flex flex-col h-full">
-              <div className="h-1/2 border-b">
-                <ChatSection
-                  salesData={salesData}
-                  onDataUpload={handleDataUpload}
-                  externalFileUpload={chatUploadTrigger}
+              >
+                <DashboardSidebar
+                  activeSection={activeSection}
+                  onSectionChange={(section) => {
+                    setActiveSection(section);
+                    setIsSidebarOpen(false);
+                  }}
+                  onLogout={handleLogout}
                 />
-              </div>
-              <div className="h-1/2 bg-muted/30 overflow-y-auto">
-                {uploadingFile ? (
-                  <div className="flex items-center justify-center h-full">
-                    <ChartsSection
-                      lineData={lineData}
-                      barData={barData}
-                      pieData={pieData}
-                      onFileUpload={handleFileUpload}
-                      uploadingFile={uploadingFile}
-                      uploadProgress={uploadProgress}
-                    />
-                  </div>
-                ) : salesData.length > 0 ? (
-                  <div className="p-6">
-                    <AIGeneratedCharts salesData={salesData} />
-                  </div>
-                ) : (
-                  <ChartsSection
-                    lineData={lineData}
-                    barData={barData}
-                    pieData={pieData}
-                    onFileUpload={handleFileUpload}
-                    onGoogleSheetsClick={() => setShowSheetsDialog(true)}
-                    uploadingFile={uploadingFile}
-                    uploadProgress={uploadProgress}
+              </aside>
+
+              {/* Overlay for mobile */}
+              {isSidebarOpen && (
+                <div
+                  className="fixed inset-0 bg-black/50 z-40 mt-[57px]"
+                  onClick={() => setIsSidebarOpen(false)}
+                />
+              )}
+            </>
+          )}
+
+          {/* Main Content Area with Resizable Panels */}
+          <div className="flex-1 overflow-hidden">
+            {isMobile ? (
+              // Mobile: Stacked layout
+              <div className="flex flex-col h-full">
+                <div className="h-1/2 border-b">
+                  <ChatSection
+                    salesData={salesData}
+                    onDataUpload={handleDataUpload}
+                    externalFileUpload={chatUploadTrigger}
                   />
-                )}
-              </div>
-            </div>
-          ) : (
-            // Desktop: Resizable panels
-            <PanelGroup direction="horizontal">
-              {/* Chat Panel - Resizable */}
-              <Panel defaultSize={35} minSize={25} maxSize={50}>
-                <ChatSection
-                  salesData={salesData}
-                  onDataUpload={handleDataUpload}
-                  externalFileUpload={chatUploadTrigger}
-                />
-              </Panel>
-
-              {/* Resize Handle */}
-              <PanelResizeHandle className="w-1 bg-border hover:bg-primary transition-colors" />
-
-              {/* Charts Panel */}
-              <Panel defaultSize={65} minSize={50}>
-                <div className="h-full bg-muted/30 overflow-y-auto">
+                </div>
+                <div className="h-1/2 bg-muted/30 overflow-y-auto">
                   {uploadingFile ? (
                     <div className="flex items-center justify-center h-full">
                       <ChartsSection
@@ -387,12 +343,58 @@ export default function DashboardPage() {
                     />
                   )}
                 </div>
-              </Panel>
-            </PanelGroup>
-          )}
+              </div>
+            ) : (
+              // Desktop: Resizable panels
+              <PanelGroup direction="horizontal">
+                {/* Chat Panel - Resizable */}
+                <Panel defaultSize={35} minSize={25} maxSize={50}>
+                  <ChatSection
+                    salesData={salesData}
+                    onDataUpload={handleDataUpload}
+                    externalFileUpload={chatUploadTrigger}
+                  />
+                </Panel>
+
+                {/* Resize Handle */}
+                <PanelResizeHandle className="w-1 bg-border hover:bg-primary transition-colors" />
+
+                {/* Charts Panel */}
+                <Panel defaultSize={65} minSize={50}>
+                  <div className="h-full bg-muted/30 overflow-y-auto">
+                    {uploadingFile ? (
+                      <div className="flex items-center justify-center h-full">
+                        <ChartsSection
+                          lineData={lineData}
+                          barData={barData}
+                          pieData={pieData}
+                          onFileUpload={handleFileUpload}
+                          uploadingFile={uploadingFile}
+                          uploadProgress={uploadProgress}
+                        />
+                      </div>
+                    ) : salesData.length > 0 ? (
+                      <div className="p-6">
+                        <AIGeneratedCharts salesData={salesData} />
+                      </div>
+                    ) : (
+                      <ChartsSection
+                        lineData={lineData}
+                        barData={barData}
+                        pieData={pieData}
+                        onFileUpload={handleFileUpload}
+                        onGoogleSheetsClick={() => setShowSheetsDialog(true)}
+                        uploadingFile={uploadingFile}
+                        uploadProgress={uploadProgress}
+                      />
+                    )}
+                  </div>
+                </Panel>
+              </PanelGroup>
+            )}
+          </div>
         </div>
       </div>
-    </div>
     </>
   );
 }
