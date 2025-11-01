@@ -34,24 +34,15 @@ export default function DashboardPage() {
   };
 
   const handleFileUpload = (file: File) => {
-    // Create a synthetic event and pass to ChatSection's upload handler
-    const dataTransfer = new DataTransfer();
-    dataTransfer.items.add(file);
-    const event = {
-      target: { files: dataTransfer.files }
-    } as React.ChangeEvent<HTMLInputElement>;
-    
-    // Trigger the file upload through a ref or state
-    // For now, we'll process it directly here
     processFile(file);
   };
 
   const processFile = async (file: File) => {
-    const Papa = (await import('papaparse')).default;
-    const XLSX = await import('xlsx');
-    
-    const isCSV = file.name.endsWith('.csv');
-    const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+    const Papa = (await import("papaparse")).default;
+    const XLSX = await import("xlsx");
+
+    const isCSV = file.name.endsWith(".csv");
+    const isExcel = file.name.endsWith(".xlsx") || file.name.endsWith(".xls");
 
     if (!isCSV && !isExcel) return;
 
@@ -62,44 +53,52 @@ export default function DashboardPage() {
         Papa.parse(file, {
           header: true,
           complete: (results) => {
-            parsedData = results.data.map((row: any, index: number) => ({
-              id: row.id || index.toString(),
-              date: row.date || row.Date || new Date().toISOString(),
-              product: row.product || row.Product || "Unknown",
-              category: row.category || row.Category || "General",
-              quantity: parseFloat(row.quantity || row.Quantity || "0"),
-              revenue: parseFloat(row.revenue || row.Revenue || row.amount || row.Amount || "0"),
-              region: row.region || row.Region || "Unknown",
-              customer: row.customer || row.Customer || "Unknown"
-            }));
-            
+            parsedData = (results.data as Record<string, string>[]).map(
+              (row, index: number) => ({
+                id: row.id || index.toString(),
+                date: row.date || row.Date || new Date().toISOString(),
+                product: row.product || row.Product || "Unknown",
+                category: row.category || row.Category || "General",
+                quantity: parseFloat(row.quantity || row.Quantity || "0"),
+                revenue: parseFloat(
+                  row.revenue || row.Revenue || row.amount || row.Amount || "0"
+                ),
+                region: row.region || row.Region || "Unknown",
+                customer: row.customer || row.Customer || "Unknown",
+              })
+            );
+
             setSalesData(parsedData);
           },
           error: (error) => {
             console.error("CSV parsing error:", error);
             alert("Error parsing CSV file. Please check the format.");
-          }
+          },
         });
       } else {
         const reader = new FileReader();
         reader.onload = (e) => {
           const data = e.target?.result;
-          const workbook = XLSX.read(data, { type: 'binary' });
+          const workbook = XLSX.read(data, { type: "binary" });
           const sheetName = workbook.SheetNames[0];
           const sheet = workbook.Sheets[sheetName];
           const jsonData = XLSX.utils.sheet_to_json(sheet);
-          
-          parsedData = jsonData.map((row: any, index: number) => ({
-            id: row.id || index.toString(),
-            date: row.date || row.Date || new Date().toISOString(),
-            product: row.product || row.Product || "Unknown",
-            category: row.category || row.Category || "General",
-            quantity: parseFloat(row.quantity || row.Quantity || "0"),
-            revenue: parseFloat(row.revenue || row.Revenue || row.amount || row.Amount || "0"),
-            region: row.region || row.Region || "Unknown",
-            customer: row.customer || row.Customer || "Unknown"
-          }));
-          
+
+          parsedData = (jsonData as Record<string, string>[]).map(
+            (row, index: number) => ({
+              id: row.id || index.toString(),
+              date: row.date || row.Date || new Date().toISOString(),
+              product: row.product || row.Product || "Unknown",
+              category: row.category || row.Category || "General",
+              quantity: parseFloat(row.quantity || row.Quantity || "0"),
+              revenue: parseFloat(
+                row.revenue || row.Revenue || row.amount || row.Amount || "0"
+              ),
+              region: row.region || row.Region || "Unknown",
+              customer: row.customer || row.Customer || "Unknown",
+            })
+          );
+
           setSalesData(parsedData);
         };
         reader.readAsBinaryString(file);
@@ -206,6 +205,7 @@ export default function DashboardPage() {
               lineData={lineData}
               barData={barData}
               pieData={pieData}
+              onFileUpload={handleFileUpload}
             />
           </div>
         </div>
